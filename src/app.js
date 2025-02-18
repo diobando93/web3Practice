@@ -10,6 +10,14 @@ const web = new web3(WEB3_PROVIDER);
 
 app.use(express.json());
 
+const minioClient = new Minio.Client({
+    endPoint: "localhost",
+    port: 9000,
+    useSSL: false,
+    accessKey: "minioadmin",
+    secretKey: "minioadmin"
+});
+
 
 app.get('/balance/:address', async (req, res) => {
     
@@ -26,14 +34,17 @@ app.get('/balance/:address', async (req, res) => {
 
 });
 
-
-const minioClient = new Minio.Client({
-    endPoint: "localhost",
-    port: 9009,
-    useSSL: false,
-    accessKey: "minioadmin",
-    secretKey: "minioadmin"
+app.post('/minio/createBucket', async (req, res) => {
+    try{
+        await minioClient.makeBucket(req.body.name, "us-east-1");
+        res.status(200).send({result:"ok"});
+    }catch(error){
+        res.status(500).send({error:error});
+    }
+    
 });
+
+
 
 app.listen(port, () => {
     console.log(`Server is running on http://localhost:${port}`);
