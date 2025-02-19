@@ -69,6 +69,25 @@ app.post('/minio/addFile', async (req, res) => {
 });
 
 
+app.get("/minio/:bucket/:fichero", async (req, res) => {
+    try{
+        const dataStream = await minioClient.getObject(req.params.bucket, req.params.fichero);
+        dataStream.pipe(res);
+    }catch(error){
+        res.status(500).send({error:error});
+    }
+
+});
+
+app.delete("/minio/:bucket/:fichero", async (req, res) => {
+    try{
+        await minioClient.removeObject(req.params.bucket, req.params.fichero);
+        res.status(200).send({result:"ok"});
+    }catch(error){
+        res.status(500).send({error:error});
+    }
+});
+
 
 app.listen(port, () => {
     console.log(`Server is running on http://localhost:${port}`);
