@@ -4,12 +4,16 @@ import './index.css'
 import App from './App.jsx'
 import {Home} from './component/Home.jsx'
 import {Lista} from './component/Lista.jsx'
+import {Query, QueryClient, QueryClientProvider} from '@tanstack/react-query';
 
 //router
 import {BrowserRouter, Routes, Route} from 'react-router-dom'
+//query client
+const queryClient = new QueryClient();
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
+    <QueryClientProvider client = {queryClient}>
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Home></Home>}>
@@ -21,6 +25,6 @@ createRoot(document.getElementById('root')).render(
         </Route>
       </Routes>
     </BrowserRouter>
-
+    </QueryClientProvider>
   </StrictMode>,
 )
