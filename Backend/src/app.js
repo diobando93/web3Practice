@@ -6,6 +6,7 @@ const path = require('path');
 const fileUpload = require('express-fileupload');
 const Minio = require('minio');
 const port = process.env.PORT || 5000;
+const cors = require('cors');
 
 const WEB3_PROVIDER = "https://eth.llamarpc.com"
 const web = new web3(WEB3_PROVIDER);
@@ -16,6 +17,7 @@ app.use(fileUpload({
     limits: { fileSize: 50 * 1024 * 1024 }, //50mb
 }));
 app.use(express.json());
+app.use(cors());
 
 const minioClient = new Minio.Client({
     endPoint: "localhost",
