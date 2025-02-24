@@ -4,7 +4,8 @@ import './index.css'
 import App from './App.jsx'
 import {Home} from './component/Home.jsx'
 import {Lista} from './component/Lista.jsx'
-import {Query, QueryClient, QueryClientProvider} from '@tanstack/react-query';
+import {Tx} from './component/Tx.jsx'
+import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 
 //router
 import {BrowserRouter, Routes, Route} from 'react-router-dom'
@@ -21,6 +22,7 @@ createRoot(document.getElementById('root')).render(
           <Route path = "productos" element = {<p>Productos</p>}></Route>
           <Route path = "clientes" element = {<p>Clientes</p>}></Route>
           <Route path = "lista" element = {<Lista></Lista>}></Route>
+          <Route path = "tx" element = {<Tx></Tx>}></Route>
           <Route path = "*" element = {<p>Ruta no valida</p>}></Route>
         </Route>
       </Routes>
