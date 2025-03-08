@@ -7,7 +7,7 @@ export function Home() {
     <div className="container d-flex flex-column justify-content-between todo">
       <Header></Header>
       <div className="felx-grow-1">
-        <Outlet></Outlet>
+        <Outlet/>
       </div>
         <Footer></Footer>
     </div>
