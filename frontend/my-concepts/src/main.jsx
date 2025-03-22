@@ -1,4 +1,4 @@
-import { StrictMode } from 'react'
+import { StrictMode, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import React, { useState } from 'react';
 
@@ -18,10 +18,46 @@ function Likes(props){
   return <button onClick={() => increment()}> Likes {likes} </button>
 }
 
+const Post = ({numero}) => {
+
+  const [data, setDatta] = useState(null)
+  const [c, setC] = useState(0)
+  
+  useEffect(() => {
+        fetch(`https://jsonplaceholder.typicode.com/posts/${numero}`)
+        .then(response => response.json())
+        .then(data => setDatta(data))
+  }, [])
+  //[] esta dependencia en el useEffect hace que solo se ejecute una vez
+  
+  if(!data) return <div>
+     Cargando el post {numero} 
+    <hr></hr>
+    </div>
+  
+
+  return <div> 
+    <button onClick={() => setC(c + 1)}> Sumar {c} </button>
+    Post {numero} 
+  {JSON.stringify(data)}
+  <hr></hr>
+  </div>
+}
+
+const App = () => {
+  return <div>
+    <Post numero={1}></Post>
+    <Post numero={2}></Post>
+    <Post numero={3}></Post>
+    <Post numero={4}></Post>
+  </div>
+}
+
 
 createRoot(document.getElementById('root')).render(
   <div>
     <Likes/>
+    <App/>
   </div>
 )
 
