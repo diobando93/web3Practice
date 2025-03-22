@@ -28,7 +28,7 @@ const Post = ({numero}) => {
         .then(response => response.json())
         .then(data => setDatta(data))
   }, [])
-  //[] esta dependencia en el useEffect hace que solo se ejecute una vez
+  //[] esta dependencia en el useEffect hace que solo se ejecute una vez, esto es una dependencia.
   
   if(!data) return <div>
      Cargando el post {numero} 
@@ -53,16 +53,50 @@ const App = () => {
   </div>
 }
 
+// Hook personalizado
+// creando hook, funcion que devuelve un resultado
+const useContador = (numero) => {
+  const [c, setC] = useState(numero)
+  const incrementar = () => setC(c + 1)
+  const decrementar = () => setC(c - 1)
+  const reset = () => setC(0)
+  
+  return {
+    c,
+    incrementar,
+    decrementar,
+    reset
+  }
+}
+
+// Modo tradicional
+const App2 = () => {
+  //const [c, setC] = useState(0)
+  //const incrementar = () => setC(c + 1)
+  //const decrementar = () => setC(c - 1)
+  //const reset = () => setC(0)
+  const {c: contador, incrementar, decrementar, reset} = useContador(5)
+  const {c: contador1, incrementar1, decrementar1, reset1} = useContador(54)
+  return <div>
+    {contador}
+    <button onClick={() => incrementar()}> Incrementar </button>
+    <button onClick={() => decrementar()}> decrementar </button>
+    <button onClick={() => reset()}> reset </button>
+    <hr></hr>
+    {contador1}
+    <button onClick={() => incrementar1()}> Incrementar </button>
+    <button onClick={() => decrementar1()}> decrementar </button>
+    <button onClick={() => reset1()}> reset </button>
+  </div>
+}
 
 createRoot(document.getElementById('root')).render(
   <div>
     <Likes/>
     <App/>
+    <App2/>
   </div>
 )
-
-
-
 
 /*
 function Likes(props){
