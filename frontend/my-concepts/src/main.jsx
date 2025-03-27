@@ -1,4 +1,4 @@
-import { StrictMode, useEffect } from 'react'
+import { StrictMode, useEffect, createContext, useContext } from 'react'
 import { createRoot } from 'react-dom/client'
 import React, { useState } from 'react';
 
@@ -8,6 +8,7 @@ const C2 = () => "componente c2"
 const C1 = (props) => <p> <C2/> este es un componente {props.a} </p>
 const lista = ["Madrid", "Barcelona", "Valencia"]
 const sesion = null
+const GlobalContext = createContext()
 
 function Likes(props){
   const [likes, setLikes] = useState(0);
@@ -90,11 +91,46 @@ const App2 = () => {
   </div>
 }
 
+// Gobal context
+const AppGlobal = ({children}) => {
+  const [estado, setEstado] = useState({
+    usuario: "user1"
+  })
+  return <GlobalContext.Provider value = {[estado, setEstado]}>
+    {children}
+  </GlobalContext.Provider>
+}
+
+const Child = () => {
+  const [global, setGlobal] = useContext(GlobalContext)
+  return <div>
+    usu: {global.usuario}
+    <Child2> </Child2> 
+  </div>
+}
+
+
+const Child2 = () => {
+  const [global, setGlobal] = useContext(GlobalContext)
+  const change = () => {
+    setGlobal({...global, usuario: "user2"})
+  }
+  return <div>
+    soy el nieto: {global.usuario}
+    <button onClick={() => {change()}}> Cambiar </button>
+  </div>
+}
+
 createRoot(document.getElementById('root')).render(
   <div>
     <Likes/>
     <App/>
     <App2/>
+    <AppGlobal>
+      <h1>hola</h1>
+      <h2>hola de nuevo</h2>
+      <Child/>
+    </AppGlobal>
   </div>
 )
 
