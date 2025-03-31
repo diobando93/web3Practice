@@ -1,5 +1,7 @@
 import { useState, memo, useCallback } from "react";
 import ReactDOM from "react-dom/client";
+import { QueryClientProvider, QueryClient, useQuery } from "@tanstack/react-query";
+
 
 interface IRegister {
   id: string
@@ -47,7 +49,7 @@ const initialValues: IRegister[] =[
 
 
 
-const App = () => {
+const App2 = () => {
   
   const [text, setText] = useState("")
   const [products, setProducts] = useState<IRegister[]>(initialValues)
@@ -72,7 +74,32 @@ const App = () => {
          </div>
 }
 
+interface IAppProps {
+  id: number
+}
+
+const App: React.FC<IAppProps> = ({id}) => {
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['post'],
+    queryFn: async () => {
+      const res = await fetch(`https://jsonplaceholder.typicode.com/posts/${id}`);
+      return res.json();
+    }
+  });
+
+  if (isLoading) return <div>Loading...</div>
+
+  return <div> {JSON.stringify(data)} </div>
+}
+
+const queyClient = new QueryClient()
+
 ReactDOM.createRoot(root).render(
-  <App />
+  <QueryClientProvider client = {queyClient}>
+      <App id={1} />
+  </QueryClientProvider>
+
+ 
 );
 
