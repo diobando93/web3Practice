@@ -1,6 +1,7 @@
 import { useState, memo, useCallback } from "react";
 import ReactDOM from "react-dom/client";
 import { QueryClientProvider, QueryClient, useQuery } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route, Outlet, Link } from "react-router-dom";
 
 
 interface IRegister {
@@ -78,7 +79,7 @@ interface IAppProps {
   id: number
 }
 
-const App: React.FC<IAppProps> = ({id}) => {
+const App3: React.FC<IAppProps> = ({id}) => {
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['post'],
@@ -93,13 +94,54 @@ const App: React.FC<IAppProps> = ({id}) => {
   return <div> {JSON.stringify(data)} </div>
 }
 
+const Layout = () => {
+  return <div>
+    <p> <Link to = "contact" > Contacto </Link></p>
+    <p> <Link to = "quiensom" > Nosotros somos </Link></p>
+    <p> <Link to = "servicios" > tenemos los siguientes servicios </Link></p>
+    <div>
+      <Outlet/>
+    </div>
+    
+  </div>  
+}
+
+const Servicios = () => {
+  return <div>
+    <p>Servicios de empresa</p>
+    <p> <Link to = "ser1" > Servicio 1 </Link></p>
+    <p> <Link to = "ser2" > Servicio 2 </Link></p>
+    <p> <Link to = "ser3" > Servicio 3 </Link></p>
+    <Outlet></Outlet>
+    </div>
+}
+
+const App = () => {
+
+  return <BrowserRouter>
+    <Routes>
+      <Route path="/" element= {<Layout/>}>
+
+        <Route path="contact" element="contacto"></Route>
+        <Route path="quiensom" element="somos una empresa etc"></Route>
+        <Route path="servicios" element= {<Servicios></Servicios>} >
+          <Route index element="servicio por defecto"></Route>
+          <Route path="ser1" element="servicio 1"></Route>
+          <Route path="ser2" element="servicio 2"></Route>
+          <Route path="ser3" element="servicio 3"></Route>
+        </Route>
+        <Route path="*" element="404"></Route>
+      </Route>
+    </Routes>
+  </BrowserRouter>
+}
+
 const queyClient = new QueryClient()
 
 ReactDOM.createRoot(root).render(
-  <QueryClientProvider client = {queyClient}>
-      <App id={1} />
-  </QueryClientProvider>
-
- 
+  //<QueryClientProvider client = {queyClient}>
+  //    <App id={1} />
+  //</QueryClientProvider>
+ <App/>
 );
 
