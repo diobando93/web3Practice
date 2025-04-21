@@ -1,0 +1,17 @@
+-Versiones esta sirve 1.13.15 tiene que coincidir con la del genesis
+docker run --rm \
+  -v ./pwd.txt:/pwd.txt \
+  -v ./datos:/data \
+ -p 5556:8545 \
+ ethereum/client-go:v1.13.15 \
+ --datadir /data \
+ --unlock fd031a75281e5f2d39af44c871c611447f3fe2d3 \
+ --allow-insecure-unlock \
+ --mine \
+ --miner.etherbase fd031a75281e5f2d39af44c871c611447f3fe2d3 \
+ --password /pwd.txt \
+ --nodiscover \
+ --http \
+ --http.addr "0.0.0.0" \
+ --http.api "admin,eth,debug,miner,net,txpool,personal,web3" \
+ --http.corsdomain "*"

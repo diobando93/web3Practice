@@ -1,8 +1,14 @@
+
 import { useEffect, useState } from "react";  
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
+
+
+
 
 type Data = {
-  p1: string;
-  p2: string;
+  jsonrpc: string;
+  id: number;
+  result: string;
 }
 
 export default function App() {
@@ -11,17 +17,31 @@ export default function App() {
 
   useEffect( () => {
 
-    fetch( "http://localhost:3333/112/34543" )
-      .then( ( response ) => response.json() )
-      .then( ( data => setData(data) ) )
-
+    fetch('http://localhost:5556/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "eth_getBalance",
+        params: [
+          "0x0cf0A30167070C3e8c3FF6f9d006910df06f78ea",
+          "latest"
+        ],
+        id: 1
+      })
+    })
+    .then( res => res.json() )
+    .then( setData )
+    .catch( err => console.error(err) )   
   }, [] )
 
   if(!data) return <div>Loading...</div>
 
   return (
     <div>
-      {data.p1} {data.p2}
+      {Number(data.result) / 1e18} 
     </div>
   )
 
