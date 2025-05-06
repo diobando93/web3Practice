@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Button } from "./button";
+import { Button } from "./ui/button";
 import { useContext, useEffect } from "react";
 import { UserContext } from "@/App";
 

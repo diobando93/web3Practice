@@ -1,10 +1,10 @@
 
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import { Dashboard } from "./components/ui/Dashboard";
-import { Home } from "./components/ui/Home";
-import { Transfer } from "./components/ui/Transfer";
-import { Balance } from "./components/ui/Balance";
-import { Faucet } from "./components/ui/Faucet";
+import { Dashboard } from "./components/Dashboard";
+import { Home } from "./components/Home";
+import { Transfer } from "./components/Transfer";
+import { Balance } from "./components/Balance";
+import { Faucet } from "./components/Faucet";
 import { createContext, useState} from "react";
 
 
