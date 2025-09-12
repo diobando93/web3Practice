@@ -1,1 +1,4 @@
 /faucet/nodo/datos/
+/deps
+/artifacts  
+/.git
