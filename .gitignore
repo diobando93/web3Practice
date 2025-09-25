@@ -1,5 +1,5 @@
 /faucet/nodo/datos/
-/deps
+/.deps
 /artifacts  
 /.git
 /.states
