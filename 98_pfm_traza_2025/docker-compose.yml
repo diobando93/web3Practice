@@ -1,0 +1,11 @@
+services:
+  foundry:
+    image: ghcr.io/foundry-rs/foundry:latest
+    working_dir: /app
+    volumes:
+      - ./sc:/app
+    ports:
+      - "8545:8545"
+    stdin_open: true      # Equivalente a -i
+    tty: true             # Equivalente a -t
+    command: /bin/sh      # Shell interactiva
