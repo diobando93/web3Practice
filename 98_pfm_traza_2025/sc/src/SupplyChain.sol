@@ -94,7 +94,96 @@ contract SupplyChain {
         emit UserRegistered(admin, Role.None, block.timestamp);
     }
     
-    // ========== AQUÍ IRÁN LAS FUNCIONES ==========
-    // (Las agregaremos en los siguientes pasos)
+     // ========== MODIFIERS ==========
+    
+    /// @notice Solo el administrador puede ejecutar
+    modifier onlyAdmin() {
+        require(msg.sender == admin, "Only admin can perform this action");
+        _;
+    }
+    
+    /// @notice Solo usuarios aprobados pueden ejecutar
+    modifier onlyApproved() {
+        require(
+            users[msg.sender].status == UserStatus.Approved,
+            "User must be approved"
+        );
+        _;
+    }
+    
+    /// @notice Solo usuarios con un rol específico pueden ejecutar
+    modifier onlyRole(Role _role) {
+        require(
+            users[msg.sender].role == _role && users[msg.sender].status == UserStatus.Approved,
+            "User must have the required role and be approved"
+        );
+        _;
+    }
+    
+    // ========== USER MANAGEMENT FUNCTIONS ==========
+    
+    /// @notice Registrar un nuevo usuario con un rol específico
+    /// @param _role El rol que solicita el usuario
+    /// @param _metadata JSON con información adicional del usuario
+    function register(Role _role, string memory _metadata) external {
+        require(_role != Role.None, "Cannot register with Role.None");
+        require(users[msg.sender].status == UserStatus.None, "User already registered");
+        require(bytes(_metadata).length > 0, "Metadata cannot be empty");
+        
+        users[msg.sender] = User({
+            userAddress: msg.sender,
+            role: _role,
+            status: UserStatus.Pending,
+            metadata: _metadata,
+            registeredAt: block.timestamp
+        });
+        
+        emit UserRegistered(msg.sender, _role, block.timestamp);
+    }
+    
+    /// @notice El admin aprueba un usuario registrado
+    /// @param _user Dirección del usuario a aprobar
+    function approveUser(address _user) external onlyAdmin {
+        require(users[_user].status == UserStatus.Pending, "User must be in Pending status");
+        
+        users[_user].status = UserStatus.Approved;
+        
+        emit UserStatusChanged(_user, UserStatus.Approved, block.timestamp);
+    }
+    
+    /// @notice El admin rechaza un usuario registrado
+    /// @param _user Dirección del usuario a rechazar
+    function rejectUser(address _user) external onlyAdmin {
+        require(users[_user].status == UserStatus.Pending, "User must be in Pending status");
+        
+        users[_user].status = UserStatus.Rejected;
+        
+        emit UserStatusChanged(_user, UserStatus.Rejected, block.timestamp);
+    }
+    
+    /// @notice Un usuario cancela su propia solicitud
+    function cancelRegistration() external {
+        require(users[msg.sender].status == UserStatus.Pending, "Only pending users can cancel");
+        
+        users[msg.sender].status = UserStatus.Canceled;
+        
+        emit UserStatusChanged(msg.sender, UserStatus.Canceled, block.timestamp);
+    }
+    
+    // ========== VIEW FUNCTIONS ==========
+    
+    /// @notice Obtener información de un usuario
+    /// @param _user Dirección del usuario
+    /// @return User struct con toda la información
+    function getUser(address _user) external view returns (User memory) {
+        return users[_user];
+    }
+    
+    /// @notice Verificar si un usuario está aprobado
+    /// @param _user Dirección del usuario
+    /// @return true si está aprobado
+    function isApproved(address _user) external view returns (bool) {
+        return users[_user].status == UserStatus.Approved;
+    }
     
 } 
