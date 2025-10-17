@@ -46,9 +46,15 @@ contract SupplyChainTest is Test {
         ) = supplyChain.users(admin);
         
         assertEq(userAddress, admin, "Admin address should be registered");
-        assertEq(uint(role), uint(SupplyChain.Role.None), "Admin should have Role.None");
+        assertEq(uint(role), uint(SupplyChain.Role.Admin), "Admin should have Role.Admin");  
         assertEq(uint(status), uint(SupplyChain.UserStatus.Approved), "Admin should be approved");
         assertGt(registeredAt, 0, "Admin should have registration timestamp");
+    }
+    /// @notice Test: No se puede registrar como Admin
+    function test_CannotRegisterAsAdmin() public {
+        vm.prank(user1);
+        vm.expectRevert("Cannot register as Admin");
+        supplyChain.register(SupplyChain.Role.Admin, '{"name":"Hacker"}');
     }
     
     /// @notice Test: Los contadores deben iniciar en 0

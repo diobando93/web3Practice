@@ -8,10 +8,11 @@ contract SupplyChain {
     /// @notice Roles disponibles en el sistema
     enum Role {
         None,       // 0 - Sin rol asignado
-        Producer,   // 1 - Productor de materias primas
-        Factory,    // 2 - Fábrica que transforma materias primas
-        Retailer,   // 3 - Minorista que vende productos
-        Consumer    // 4 - Consumidor final
+        Admin,      // 1 - Administrador del sistema
+        Producer,   // 2 - Productor de materias primas
+        Factory,    // 3 - Fábrica que transforma materias primas
+        Retailer,   // 4 - Minorista que vende productos
+        Consumer    // 5 - Consumidor final
     }
     
     /// @notice Estados posibles de un usuario
@@ -83,15 +84,16 @@ contract SupplyChain {
     constructor() {
         admin = msg.sender;
         
+        // El admin se auto-registra como aprobado con rol Admin
         users[admin] = User({
             userAddress: admin,
-            role: Role.None,
+            role: Role.Admin,  // ✅ Ahora tiene rol Admin explícito
             status: UserStatus.Approved,
             metadata: "System Administrator",
             registeredAt: block.timestamp
         });
         
-        emit UserRegistered(admin, Role.None, block.timestamp);
+        emit UserRegistered(admin, Role.Admin, block.timestamp);
     }
     
      // ========== MODIFIERS ==========
@@ -127,6 +129,7 @@ contract SupplyChain {
     /// @param _metadata JSON con información adicional del usuario
     function register(Role _role, string memory _metadata) external {
         require(_role != Role.None, "Cannot register with Role.None");
+        require(_role != Role.Admin, "Cannot register as Admin");  // ✅ NUEVO
         require(users[msg.sender].status == UserStatus.None, "User already registered");
         require(bytes(_metadata).length > 0, "Metadata cannot be empty");
         
@@ -140,7 +143,6 @@ contract SupplyChain {
         
         emit UserRegistered(msg.sender, _role, block.timestamp);
     }
-    
     /// @notice El admin aprueba un usuario registrado
     /// @param _user Dirección del usuario a aprobar
     function approveUser(address _user) external onlyAdmin {
