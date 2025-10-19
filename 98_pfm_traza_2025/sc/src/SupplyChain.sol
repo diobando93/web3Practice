@@ -187,5 +187,112 @@ contract SupplyChain {
     function isApproved(address _user) external view returns (bool) {
         return users[_user].status == UserStatus.Approved;
     }
+
+     // ========== TOKEN MANAGEMENT FUNCTIONS ==========
+    
+    /// @notice Crear un nuevo token (materia prima o producto)
+    /// @param _name Nombre del token/producto
+    /// @param _metadata JSON con características del producto
+    /// @param _parentId ID del token padre (0 si es materia prima)
+    /// @param _initialAmount Cantidad inicial del token
+    function createToken(
+        string memory _name,
+        string memory _metadata,
+        uint256 _parentId,
+        uint256 _initialAmount
+    ) external onlyApproved returns (uint256) {
+        require(bytes(_name).length > 0, "Name cannot be empty");
+        require(bytes(_metadata).length > 0, "Metadata cannot be empty");
+        require(_initialAmount > 0, "Initial amount must be greater than 0");
+        
+        // Validar según el rol del creador
+        Role creatorRole = users[msg.sender].role;
+        
+        if (creatorRole == Role.Producer) {
+            // Producer solo puede crear materias primas (sin parent)
+            require(_parentId == 0, "Producer can only create raw materials (no parent)");
+        } else if (creatorRole == Role.Factory || creatorRole == Role.Retailer) {
+            // Factory y Retailer deben especificar un parent
+            require(_parentId > 0, "Factory/Retailer must specify a parent token");
+            require(tokens[_parentId].exists, "Parent token does not exist");
+        } else {
+            // Consumer y Admin no pueden crear tokens
+            revert("Only Producer, Factory, or Retailer can create tokens");
+        }
+        
+        // Incrementar contador y crear token
+        tokenCounter++;
+        uint256 newTokenId = tokenCounter;
+        
+        tokens[newTokenId] = Token({
+            id: newTokenId,
+            name: _name,
+            metadata: _metadata,
+            creator: msg.sender,
+            parentId: _parentId,
+            createdAt: block.timestamp,
+            exists: true
+        });
+        
+        // Asignar balance inicial al creador
+        balances[msg.sender][newTokenId] = _initialAmount;
+        
+        // Agregar a la lista de tokens del usuario
+        userTokens[msg.sender].push(newTokenId);
+        
+        emit TokenCreated(newTokenId, msg.sender, _name, _parentId);
+        
+        return newTokenId;
+    }
+    
+    /// @notice Obtener información de un token
+    /// @param _tokenId ID del token
+    /// @return Token struct con toda la información
+    function getToken(uint256 _tokenId) external view returns (Token memory) {
+        require(tokens[_tokenId].exists, "Token does not exist");
+        return tokens[_tokenId];
+    }
+    
+    /// @notice Obtener el balance de un usuario para un token específico
+    /// @param _user Dirección del usuario
+    /// @param _tokenId ID del token
+    /// @return Cantidad de tokens que posee el usuario
+    function balanceOf(address _user, uint256 _tokenId) external view returns (uint256) {
+        return balances[_user][_tokenId];
+    }
+    
+    /// @notice Obtener la lista de IDs de tokens creados por un usuario
+    /// @param _user Dirección del usuario
+    /// @return Array de IDs de tokens
+    function getUserTokens(address _user) external view returns (uint256[] memory) {
+        return userTokens[_user];
+    }
+    
+    /// @notice Obtener el historial de parentesco de un token (trazabilidad)
+    /// @param _tokenId ID del token
+    /// @return Array de IDs desde el origen hasta el token actual
+    function getTokenHistory(uint256 _tokenId) external view returns (uint256[] memory) {
+        require(tokens[_tokenId].exists, "Token does not exist");
+        
+        // Contar cuántos parents tiene
+        uint256 depth = 0;
+        uint256 currentId = _tokenId;
+        
+        while (currentId != 0) {
+            depth++;
+            currentId = tokens[currentId].parentId;
+        }
+        
+        // Crear array y llenar desde el token actual hacia atrás
+        uint256[] memory history = new uint256[](depth);
+        currentId = _tokenId;
+        
+        for (uint256 i = 0; i < depth; i++) {
+            history[depth - 1 - i] = currentId;
+            currentId = tokens[currentId].parentId;
+        }
+        
+        return history;
+    }
     
 } 

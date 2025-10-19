@@ -206,4 +206,159 @@ contract SupplyChainTest is Test {
         supplyChain.approveUser(user1);
         assertTrue(supplyChain.isApproved(user1), "Approved user should be approved");
     }
+
+     // ========== TESTS DE TOKENS ==========
+    
+    /// @notice Test: Producer puede crear materia prima (sin parent)
+    function test_ProducerCanCreateRawMaterial() public {
+        // Registrar y aprobar producer
+        vm.prank(user1);
+        supplyChain.register(SupplyChain.Role.Producer, '{"name":"Farm ABC"}');
+        supplyChain.approveUser(user1);
+        
+        // Producer crea materia prima
+        vm.prank(user1);
+        uint256 tokenId = supplyChain.createToken("Wheat", '{"type":"grain"}', 0, 1000);
+        
+        assertEq(tokenId, 1, "First token should have ID 1");
+        assertEq(supplyChain.tokenCounter(), 1, "Token counter should be 1");
+        
+        // Verificar token
+        SupplyChain.Token memory token = supplyChain.getToken(tokenId);
+        assertEq(token.name, "Wheat", "Token name should match");
+        assertEq(token.creator, user1, "Creator should be user1");
+        assertEq(token.parentId, 0, "Raw material should have no parent");
+        assertTrue(token.exists, "Token should exist");
+        
+        // Verificar balance
+        assertEq(supplyChain.balanceOf(user1, tokenId), 1000, "Producer should have initial balance");
+    }
+    
+    /// @notice Test: Producer no puede crear token con parent
+    function test_ProducerCannotCreateTokenWithParent() public {
+        vm.prank(user1);
+        supplyChain.register(SupplyChain.Role.Producer, '{"name":"Farm"}');
+        supplyChain.approveUser(user1);
+        
+        vm.prank(user1);
+        vm.expectRevert("Producer can only create raw materials (no parent)");
+        supplyChain.createToken("Product", '{"type":"processed"}', 1, 100);
+    }
+    
+    /// @notice Test: Factory puede crear producto derivado
+    function test_FactoryCanCreateDerivedProduct() public {
+        // Crear producer y materia prima
+        vm.prank(user1);
+        supplyChain.register(SupplyChain.Role.Producer, '{"name":"Farm"}');
+        supplyChain.approveUser(user1);
+        
+        vm.prank(user1);
+        uint256 rawMaterialId = supplyChain.createToken("Wheat", '{"type":"grain"}', 0, 1000);
+        
+        // Registrar factory
+        vm.prank(user2);
+        supplyChain.register(SupplyChain.Role.Factory, '{"name":"Mill"}');
+        supplyChain.approveUser(user2);
+        
+        // Factory crea producto derivado
+        vm.prank(user2);
+        uint256 productId = supplyChain.createToken("Flour", '{"type":"processed"}', rawMaterialId, 500);
+        
+        assertEq(productId, 2, "Product should have ID 2");
+        
+        SupplyChain.Token memory product = supplyChain.getToken(productId);
+        assertEq(product.parentId, rawMaterialId, "Product should have raw material as parent");
+        assertEq(product.creator, user2, "Creator should be factory");
+    }
+    
+    /// @notice Test: Factory no puede crear sin parent
+    function test_FactoryCannotCreateWithoutParent() public {
+        vm.prank(user1);
+        supplyChain.register(SupplyChain.Role.Factory, '{"name":"Mill"}');
+        supplyChain.approveUser(user1);
+        
+        vm.prank(user1);
+        vm.expectRevert("Factory/Retailer must specify a parent token");
+        supplyChain.createToken("Product", '{"type":"processed"}', 0, 100);
+    }
+    
+    /// @notice Test: Consumer no puede crear tokens
+    function test_ConsumerCannotCreateTokens() public {
+        vm.prank(user1);
+        supplyChain.register(SupplyChain.Role.Consumer, '{"name":"John"}');
+        supplyChain.approveUser(user1);
+        
+        vm.prank(user1);
+        vm.expectRevert("Only Producer, Factory, or Retailer can create tokens");
+        supplyChain.createToken("Product", '{"type":"anything"}', 0, 100);
+    }
+    
+    /// @notice Test: Admin no puede crear tokens
+    function test_AdminCannotCreateTokens() public {
+        vm.expectRevert("Only Producer, Factory, or Retailer can create tokens");
+        supplyChain.createToken("Product", '{"type":"anything"}', 0, 100);
+    }
+    
+    /// @notice Test: No se puede crear token sin estar aprobado
+    function test_UnapprovedUserCannotCreateToken() public {
+        vm.prank(user1);
+        supplyChain.register(SupplyChain.Role.Producer, '{"name":"Farm"}');
+        // No se aprueba
+        
+        vm.prank(user1);
+        vm.expectRevert("User must be approved");
+        supplyChain.createToken("Wheat", '{"type":"grain"}', 0, 1000);
+    }
+    
+    /// @notice Test: getUserTokens devuelve tokens del usuario
+    function test_GetUserTokensReturnsCorrectList() public {
+        vm.prank(user1);
+        supplyChain.register(SupplyChain.Role.Producer, '{"name":"Farm"}');
+        supplyChain.approveUser(user1);
+        
+        // Crear varios tokens
+        vm.startPrank(user1);
+        uint256 token1 = supplyChain.createToken("Wheat", '{"type":"grain"}', 0, 1000);
+        uint256 token2 = supplyChain.createToken("Corn", '{"type":"grain"}', 0, 500);
+        vm.stopPrank();
+        
+        uint256[] memory userTokensList = supplyChain.getUserTokens(user1);
+        assertEq(userTokensList.length, 2, "Should have 2 tokens");
+        assertEq(userTokensList[0], token1, "First token should match");
+        assertEq(userTokensList[1], token2, "Second token should match");
+    }
+    
+    /// @notice Test: getTokenHistory devuelve trazabilidad correcta
+    function test_GetTokenHistoryReturnsCorrectTraceability() public {
+        // Producer crea materia prima
+        vm.prank(user1);
+        supplyChain.register(SupplyChain.Role.Producer, '{"name":"Farm"}');
+        supplyChain.approveUser(user1);
+        
+        vm.prank(user1);
+        uint256 rawId = supplyChain.createToken("Wheat", '{"type":"grain"}', 0, 1000);
+        
+        // Factory crea producto
+        vm.prank(user2);
+        supplyChain.register(SupplyChain.Role.Factory, '{"name":"Mill"}');
+        supplyChain.approveUser(user2);
+        
+        vm.prank(user2);
+        uint256 productId = supplyChain.createToken("Flour", '{"type":"processed"}', rawId, 500);
+        
+        // Retailer crea producto final
+        vm.prank(user3);
+        supplyChain.register(SupplyChain.Role.Retailer, '{"name":"Bakery"}');
+        supplyChain.approveUser(user3);
+        
+        vm.prank(user3);
+        uint256 finalId = supplyChain.createToken("Bread", '{"type":"final"}', productId, 200);
+        
+        // Verificar historia
+        uint256[] memory history = supplyChain.getTokenHistory(finalId);
+        assertEq(history.length, 3, "Should have 3 levels");
+        assertEq(history[0], rawId, "First should be raw material");
+        assertEq(history[1], productId, "Second should be product");
+        assertEq(history[2], finalId, "Third should be final product");
+    }
 }
