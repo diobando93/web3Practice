@@ -361,4 +361,255 @@ contract SupplyChainTest is Test {
         assertEq(history[1], productId, "Second should be product");
         assertEq(history[2], finalId, "Third should be final product");
     }
+
+    // ========== TESTS DE TRANSFERENCIAS ==========
+    
+    /// @notice Test: Producer puede transferir a Factory
+    function test_ProducerCanTransferToFactory() public {
+        // Setup: Producer con token
+        vm.prank(user1);
+        supplyChain.register(SupplyChain.Role.Producer, '{"name":"Farm"}');
+        supplyChain.approveUser(user1);
+        
+        vm.prank(user1);
+        uint256 tokenId = supplyChain.createToken("Wheat", '{"type":"grain"}', 0, 1000);
+        
+        // Setup: Factory
+        vm.prank(user2);
+        supplyChain.register(SupplyChain.Role.Factory, '{"name":"Mill"}');
+        supplyChain.approveUser(user2);
+        
+        // Producer inicia transferencia
+        vm.prank(user1);
+        uint256 transferId = supplyChain.initiateTransfer(tokenId, user2, 500);
+        
+        assertEq(transferId, 1, "Transfer ID should be 1");
+        assertEq(supplyChain.transferCounter(), 1, "Transfer counter should be 1");
+        
+        // Verificar transferencia
+        SupplyChain.Transfer memory transfer = supplyChain.getTransfer(transferId);
+        assertEq(transfer.from, user1, "From should be user1");
+        assertEq(transfer.to, user2, "To should be user2");
+        assertEq(transfer.tokenId, tokenId, "Token ID should match");
+        assertEq(transfer.amount, 500, "Amount should be 500");
+        assertEq(uint(transfer.status), uint(SupplyChain.TransferStatus.Pending), "Should be pending");
+    }
+    
+    /// @notice Test: Factory puede aceptar transferencia de Producer
+    function test_FactoryCanAcceptTransferFromProducer() public {
+        // Setup transferencia pendiente
+        vm.prank(user1);
+        supplyChain.register(SupplyChain.Role.Producer, '{"name":"Farm"}');
+        supplyChain.approveUser(user1);
+        
+        vm.prank(user1);
+        uint256 tokenId = supplyChain.createToken("Wheat", '{"type":"grain"}', 0, 1000);
+        
+        vm.prank(user2);
+        supplyChain.register(SupplyChain.Role.Factory, '{"name":"Mill"}');
+        supplyChain.approveUser(user2);
+        
+        vm.prank(user1);
+        uint256 transferId = supplyChain.initiateTransfer(tokenId, user2, 500);
+        
+        // Balances antes
+        assertEq(supplyChain.balanceOf(user1, tokenId), 1000, "Producer should have 1000");
+        assertEq(supplyChain.balanceOf(user2, tokenId), 0, "Factory should have 0");
+        
+        // Factory acepta
+        vm.prank(user2);
+        supplyChain.acceptTransfer(transferId);
+        
+        // Balances después
+        assertEq(supplyChain.balanceOf(user1, tokenId), 500, "Producer should have 500");
+        assertEq(supplyChain.balanceOf(user2, tokenId), 500, "Factory should have 500");
+        
+        // Estado de transferencia
+        SupplyChain.Transfer memory transfer = supplyChain.getTransfer(transferId);
+        assertEq(uint(transfer.status), uint(SupplyChain.TransferStatus.Accepted), "Should be accepted");
+        assertGt(transfer.resolvedAt, 0, "Should have resolved timestamp");
+    }
+    
+    /// @notice Test: Factory puede rechazar transferencia
+    function test_FactoryCanRejectTransfer() public {
+        // Setup transferencia pendiente
+        vm.prank(user1);
+        supplyChain.register(SupplyChain.Role.Producer, '{"name":"Farm"}');
+        supplyChain.approveUser(user1);
+        
+        vm.prank(user1);
+        uint256 tokenId = supplyChain.createToken("Wheat", '{"type":"grain"}', 0, 1000);
+        
+        vm.prank(user2);
+        supplyChain.register(SupplyChain.Role.Factory, '{"name":"Mill"}');
+        supplyChain.approveUser(user2);
+        
+        vm.prank(user1);
+        uint256 transferId = supplyChain.initiateTransfer(tokenId, user2, 500);
+        
+        // Factory rechaza
+        vm.prank(user2);
+        supplyChain.rejectTransfer(transferId);
+        
+        // Balances no cambian
+        assertEq(supplyChain.balanceOf(user1, tokenId), 1000, "Producer should still have 1000");
+        assertEq(supplyChain.balanceOf(user2, tokenId), 0, "Factory should still have 0");
+        
+        // Estado
+        SupplyChain.Transfer memory transfer = supplyChain.getTransfer(transferId);
+        assertEq(uint(transfer.status), uint(SupplyChain.TransferStatus.Rejected), "Should be rejected");
+    }
+    
+    /// @notice Test: Producer no puede transferir a Retailer (flujo inválido)
+    function test_ProducerCannotTransferToRetailer() public {
+        vm.prank(user1);
+        supplyChain.register(SupplyChain.Role.Producer, '{"name":"Farm"}');
+        supplyChain.approveUser(user1);
+        
+        vm.prank(user1);
+        uint256 tokenId = supplyChain.createToken("Wheat", '{"type":"grain"}', 0, 1000);
+        
+        vm.prank(user2);
+        supplyChain.register(SupplyChain.Role.Retailer, '{"name":"Store"}');
+        supplyChain.approveUser(user2);
+        
+        vm.prank(user1);
+        vm.expectRevert("Invalid transfer flow for these roles");
+        supplyChain.initiateTransfer(tokenId, user2, 500);
+    }
+    
+    /// @notice Test: Factory puede transferir a Retailer
+    function test_FactoryCanTransferToRetailer() public {
+        // Producer crea y transfiere a Factory
+        vm.prank(user1);
+        supplyChain.register(SupplyChain.Role.Producer, '{"name":"Farm"}');
+        supplyChain.approveUser(user1);
+        
+        vm.prank(user1);
+        uint256 rawId = supplyChain.createToken("Wheat", '{"type":"grain"}', 0, 1000);
+        
+        vm.prank(user2);
+        supplyChain.register(SupplyChain.Role.Factory, '{"name":"Mill"}');
+        supplyChain.approveUser(user2);
+        
+        // Factory crea producto derivado
+        vm.prank(user2);
+        uint256 productId = supplyChain.createToken("Flour", '{"type":"processed"}', rawId, 500);
+        
+        // Retailer
+        vm.prank(user3);
+        supplyChain.register(SupplyChain.Role.Retailer, '{"name":"Store"}');
+        supplyChain.approveUser(user3);
+        
+        // Factory transfiere a Retailer
+        vm.prank(user2);
+        uint256 transferId = supplyChain.initiateTransfer(productId, user3, 200);
+        
+        vm.prank(user3);
+        supplyChain.acceptTransfer(transferId);
+        
+        assertEq(supplyChain.balanceOf(user3, productId), 200, "Retailer should have 200");
+    }
+    
+    /// @notice Test: No se puede transferir más de lo que se tiene
+    function test_CannotTransferMoreThanBalance() public {
+        vm.prank(user1);
+        supplyChain.register(SupplyChain.Role.Producer, '{"name":"Farm"}');
+        supplyChain.approveUser(user1);
+        
+        vm.prank(user1);
+        uint256 tokenId = supplyChain.createToken("Wheat", '{"type":"grain"}', 0, 1000);
+        
+        vm.prank(user2);
+        supplyChain.register(SupplyChain.Role.Factory, '{"name":"Mill"}');
+        supplyChain.approveUser(user2);
+        
+        vm.prank(user1);
+        vm.expectRevert("Insufficient balance");
+        supplyChain.initiateTransfer(tokenId, user2, 1500);
+    }
+    
+    /// @notice Test: Solo el destinatario puede aceptar
+    function test_OnlyRecipientCanAccept() public {
+        vm.prank(user1);
+        supplyChain.register(SupplyChain.Role.Producer, '{"name":"Farm"}');
+        supplyChain.approveUser(user1);
+        
+        vm.prank(user1);
+        uint256 tokenId = supplyChain.createToken("Wheat", '{"type":"grain"}', 0, 1000);
+        
+        vm.prank(user2);
+        supplyChain.register(SupplyChain.Role.Factory, '{"name":"Mill"}');
+        supplyChain.approveUser(user2);
+        
+        vm.prank(user1);
+        uint256 transferId = supplyChain.initiateTransfer(tokenId, user2, 500);
+        
+        // ✅ AGREGAR: Registrar y aprobar user3
+        vm.prank(user3);
+        supplyChain.register(SupplyChain.Role.Consumer, '{"name":"John"}');
+        supplyChain.approveUser(user3);
+        
+        // user3 (aprobado pero no destinatario) intenta aceptar
+        vm.prank(user3);
+        vm.expectRevert("Only recipient can accept");
+        supplyChain.acceptTransfer(transferId);
+    }
+    
+    /// @notice Test: getPendingTransfers devuelve transferencias correctas
+    function test_GetPendingTransfersReturnsCorrectList() public {
+        vm.prank(user1);
+        supplyChain.register(SupplyChain.Role.Producer, '{"name":"Farm"}');
+        supplyChain.approveUser(user1);
+        
+        vm.prank(user1);
+        uint256 tokenId = supplyChain.createToken("Wheat", '{"type":"grain"}', 0, 1000);
+        
+        vm.prank(user2);
+        supplyChain.register(SupplyChain.Role.Factory, '{"name":"Mill"}');
+        supplyChain.approveUser(user2);
+        
+        // Crear 2 transferencias
+        vm.startPrank(user1);
+        uint256 transfer1 = supplyChain.initiateTransfer(tokenId, user2, 200);
+        uint256 transfer2 = supplyChain.initiateTransfer(tokenId, user2, 300);
+        vm.stopPrank();
+        
+        uint256[] memory pending = supplyChain.getPendingTransfers(user2);
+        assertEq(pending.length, 2, "Should have 2 pending transfers");
+        assertEq(pending[0], transfer1, "First transfer should match");
+        assertEq(pending[1], transfer2, "Second transfer should match");
+        
+        // Aceptar una
+        vm.prank(user2);
+        supplyChain.acceptTransfer(transfer1);
+        
+        pending = supplyChain.getPendingTransfers(user2);
+        assertEq(pending.length, 1, "Should have 1 pending transfer after accepting");
+    }
+    
+    /// @notice Test: getTokenTransferHistory devuelve historial correcto
+    function test_GetTokenTransferHistoryReturnsCorrectHistory() public {
+        vm.prank(user1);
+        supplyChain.register(SupplyChain.Role.Producer, '{"name":"Farm"}');
+        supplyChain.approveUser(user1);
+        
+        vm.prank(user1);
+        uint256 tokenId = supplyChain.createToken("Wheat", '{"type":"grain"}', 0, 1000);
+        
+        vm.prank(user2);
+        supplyChain.register(SupplyChain.Role.Factory, '{"name":"Mill"}');
+        supplyChain.approveUser(user2);
+        
+        // Crear transferencias
+        vm.startPrank(user1);
+        uint256 t1 = supplyChain.initiateTransfer(tokenId, user2, 200);
+        uint256 t2 = supplyChain.initiateTransfer(tokenId, user2, 300);
+        vm.stopPrank();
+        
+        uint256[] memory history = supplyChain.getTokenTransferHistory(tokenId);
+        assertEq(history.length, 2, "Should have 2 transfers in history");
+        assertEq(history[0], t1, "First transfer should match");
+        assertEq(history[1], t2, "Second transfer should match");
+    }
 }

@@ -294,5 +294,183 @@ contract SupplyChain {
         
         return history;
     }
+
+     // ========== TRANSFER FUNCTIONS ==========
+    
+    /// @notice Validar que la transferencia sigue el flujo correcto según roles
+    /// @param _from Rol del remitente
+    /// @param _to Rol del destinatario
+    /// @return true si el flujo es válido
+    function _isValidTransferFlow(Role _from, Role _to) internal pure returns (bool) {
+        // Producer -> Factory
+        if (_from == Role.Producer && _to == Role.Factory) return true;
+        
+        // Factory -> Retailer
+        if (_from == Role.Factory && _to == Role.Retailer) return true;
+        
+        // Retailer -> Consumer
+        if (_from == Role.Retailer && _to == Role.Consumer) return true;
+        
+        return false;
+    }
+    
+    /// @notice Iniciar una transferencia de tokens
+    /// @param _tokenId ID del token a transferir
+    /// @param _to Dirección del destinatario
+    /// @param _amount Cantidad a transferir
+    /// @return ID de la transferencia creada
+    function initiateTransfer(
+        uint256 _tokenId,
+        address _to,
+        uint256 _amount
+    ) external onlyApproved returns (uint256) {
+        require(tokens[_tokenId].exists, "Token does not exist");
+        require(_to != address(0), "Invalid recipient address");
+        require(_to != msg.sender, "Cannot transfer to yourself");
+        require(_amount > 0, "Amount must be greater than 0");
+        require(balances[msg.sender][_tokenId] >= _amount, "Insufficient balance");
+        require(users[_to].status == UserStatus.Approved, "Recipient must be approved");
+        
+        Role senderRole = users[msg.sender].role;
+        Role recipientRole = users[_to].role;
+        
+        // Validar flujo según roles
+        require(
+            _isValidTransferFlow(senderRole, recipientRole),
+            "Invalid transfer flow for these roles"
+        );
+        
+        // Crear transferencia
+        transferCounter++;
+        uint256 transferId = transferCounter;
+        
+        transfers[transferId] = Transfer({
+            id: transferId,
+            tokenId: _tokenId,
+            from: msg.sender,
+            to: _to,
+            amount: _amount,
+            status: TransferStatus.Pending,
+            createdAt: block.timestamp,
+            resolvedAt: 0
+        });
+        
+        // Agregar a transferencias pendientes del destinatario
+        pendingTransfers[_to].push(transferId);
+        
+        emit TransferInitiated(transferId, _tokenId, msg.sender, _to, _amount);
+        
+        return transferId;
+    }
+    
+    /// @notice Aceptar una transferencia pendiente
+    /// @param _transferId ID de la transferencia
+    function acceptTransfer(uint256 _transferId) external onlyApproved {
+        Transfer storage transfer = transfers[_transferId];
+        
+        require(transfer.id != 0, "Transfer does not exist");
+        require(transfer.to == msg.sender, "Only recipient can accept");
+        require(transfer.status == TransferStatus.Pending, "Transfer is not pending");
+        require(
+            balances[transfer.from][transfer.tokenId] >= transfer.amount,
+            "Sender has insufficient balance"
+        );
+        
+        // Actualizar balances
+        balances[transfer.from][transfer.tokenId] -= transfer.amount;
+        balances[transfer.to][transfer.tokenId] += transfer.amount;
+        
+        // Si el destinatario no tenía este token, agregarlo a su lista
+        if (balances[transfer.to][transfer.tokenId] == transfer.amount) {
+            userTokens[transfer.to].push(transfer.tokenId);
+        }
+        
+        // Actualizar estado de la transferencia
+        transfer.status = TransferStatus.Accepted;
+        transfer.resolvedAt = block.timestamp;
+        
+        // Remover de pendientes
+        _removePendingTransfer(msg.sender, _transferId);
+        
+        emit TransferAccepted(_transferId, block.timestamp);
+    }
+    
+    /// @notice Rechazar una transferencia pendiente
+    /// @param _transferId ID de la transferencia
+    function rejectTransfer(uint256 _transferId) external onlyApproved {
+        Transfer storage transfer = transfers[_transferId];
+        
+        require(transfer.id != 0, "Transfer does not exist");
+        require(transfer.to == msg.sender, "Only recipient can reject");
+        require(transfer.status == TransferStatus.Pending, "Transfer is not pending");
+        
+        // Actualizar estado
+        transfer.status = TransferStatus.Rejected;
+        transfer.resolvedAt = block.timestamp;
+        
+        // Remover de pendientes
+        _removePendingTransfer(msg.sender, _transferId);
+        
+        emit TransferRejected(_transferId, block.timestamp);
+    }
+    
+    /// @notice Función interna para remover una transferencia de la lista de pendientes
+    /// @param _user Usuario del que remover
+    /// @param _transferId ID de la transferencia a remover
+    function _removePendingTransfer(address _user, uint256 _transferId) internal {
+        uint256[] storage pending = pendingTransfers[_user];
+        
+        for (uint256 i = 0; i < pending.length; i++) {
+            if (pending[i] == _transferId) {
+                // Mover el último elemento a esta posición y hacer pop
+                pending[i] = pending[pending.length - 1];
+                pending.pop();
+                break;
+            }
+        }
+    }
+    
+    /// @notice Obtener información de una transferencia
+    /// @param _transferId ID de la transferencia
+    /// @return Transfer struct con toda la información
+    function getTransfer(uint256 _transferId) external view returns (Transfer memory) {
+        require(transfers[_transferId].id != 0, "Transfer does not exist");
+        return transfers[_transferId];
+    }
+    
+    /// @notice Obtener transferencias pendientes de un usuario
+    /// @param _user Dirección del usuario
+    /// @return Array de IDs de transferencias pendientes
+    function getPendingTransfers(address _user) external view returns (uint256[] memory) {
+        return pendingTransfers[_user];
+    }
+    
+    /// @notice Obtener el historial de transferencias de un token
+    /// @param _tokenId ID del token
+    /// @return Array de IDs de transferencias relacionadas con el token
+    function getTokenTransferHistory(uint256 _tokenId) external view returns (uint256[] memory) {
+        require(tokens[_tokenId].exists, "Token does not exist");
+        
+        // Contar transferencias del token
+        uint256 count = 0;
+        for (uint256 i = 1; i <= transferCounter; i++) {
+            if (transfers[i].tokenId == _tokenId) {
+                count++;
+            }
+        }
+        
+        // Crear array con los IDs
+        uint256[] memory history = new uint256[](count);
+        uint256 index = 0;
+        
+        for (uint256 i = 1; i <= transferCounter; i++) {
+            if (transfers[i].tokenId == _tokenId) {
+                history[index] = i;
+                index++;
+            }
+        }
+        
+        return history;
+    }
     
 } 
