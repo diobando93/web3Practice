@@ -1,6 +1,11 @@
 import { ethers } from 'ethers';
 import SupplyChainABI from '@/contracts/SupplyChain.json';
-import { CONTRACT_ADDRESS } from '@/contracts/config';
+import { CONTRACT_ADDRESS, RPC_URL } from '@/contracts/config';
+
+// Provider para leer datos (conectado directamente a Anvil)
+export const getReadOnlyProvider = () => {
+  return new ethers.JsonRpcProvider(RPC_URL);
+};
 
 export const getContract = (signerOrProvider: ethers.Signer | ethers.Provider) => {
   return new ethers.Contract(CONTRACT_ADDRESS, SupplyChainABI.abi, signerOrProvider);

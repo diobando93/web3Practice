@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { ethers, BrowserProvider } from 'ethers';
+import { RPC_URL } from '@/contracts/config';
 
 interface Web3ContextType {
   account: string | null;
@@ -37,6 +38,8 @@ export const Web3Provider = ({ children }: { children: ReactNode }) => {
         } else if (accounts[0] !== account) {
           setAccount(accounts[0]);
           localStorage.setItem('connectedAccount', accounts[0]);
+          // Reconectar para actualizar el signer
+          connectWallet();
         }
       };
 
@@ -62,14 +65,22 @@ export const Web3Provider = ({ children }: { children: ReactNode }) => {
 
     try {
       setIsConnecting(true);
+      
+      // Crear provider desde MetaMask
       const web3Provider = new BrowserProvider(window.ethereum);
+      
+      // Solicitar acceso a las cuentas
       const accounts = await web3Provider.send('eth_requestAccounts', []);
+      
+      // Obtener el signer
       const web3Signer = await web3Provider.getSigner();
 
       setProvider(web3Provider);
       setSigner(web3Signer);
       setAccount(accounts[0]);
       localStorage.setItem('connectedAccount', accounts[0]);
+      
+      console.log('Connected to:', accounts[0]);
     } catch (error) {
       console.error('Error connecting wallet:', error);
       alert('Failed to connect wallet');

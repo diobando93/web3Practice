@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useWeb3 } from '@/contexts/Web3Context';
-import { getContract, Role, UserStatus } from '@/lib/contract';
-import { ethers } from 'ethers';
+import { getContract, getReadOnlyProvider, Role, UserStatus } from '@/lib/contract';
 
 interface User {
   userAddress: string;
@@ -14,14 +13,14 @@ interface User {
 }
 
 export const useContract = () => {
-  const { account, signer, provider } = useWeb3();
+  const { account, signer } = useWeb3();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Cargar información del usuario
+  // Cargar información del usuario usando provider directo
   useEffect(() => {
     const loadUser = async () => {
-      if (!account || !provider) {
+      if (!account) {
         setUser(null);
         setIsLoading(false);
         return;
@@ -29,8 +28,16 @@ export const useContract = () => {
 
       try {
         setIsLoading(true);
+        console.log('Loading user data for:', account);
+        
+        // Usar provider directo a Anvil (no MetaMask)
+        const provider = getReadOnlyProvider();
         const contract = getContract(provider);
+        
+        console.log('Contract address:', await contract.getAddress());
+        
         const userData = await contract.users(account);
+        console.log('User data raw:', userData);
         
         setUser({
           userAddress: userData[0],
@@ -38,6 +45,13 @@ export const useContract = () => {
           status: Number(userData[2]) as UserStatus,
           metadata: userData[3],
           registeredAt: userData[4],
+        });
+        
+        console.log('User loaded:', {
+          address: userData[0],
+          role: Number(userData[1]),
+          status: Number(userData[2]),
+          metadata: userData[3],
         });
       } catch (error) {
         console.error('Error loading user:', error);
@@ -48,7 +62,7 @@ export const useContract = () => {
     };
 
     loadUser();
-  }, [account, provider]);
+  }, [account]);
 
   // Función para registrarse
   const register = async (role: Role, metadata: string) => {
@@ -84,7 +98,7 @@ export const useContract = () => {
     
     if (event) {
       const parsed = contract.interface.parseLog(event);
-      return Number(parsed?.args[0]); // tokenId
+      return Number(parsed?.args[0]);
     }
     
     return null;
@@ -102,7 +116,6 @@ export const useContract = () => {
     const tx = await contract.initiateTransfer(tokenId, to, amount);
     const receipt = await tx.wait();
     
-    // Extraer el transferId del evento
     const event = receipt.logs.find((log: any) => {
       try {
         const parsed = contract.interface.parseLog(log);
@@ -114,7 +127,7 @@ export const useContract = () => {
     
     if (event) {
       const parsed = contract.interface.parseLog(event);
-      return Number(parsed?.args[0]); // transferId
+      return Number(parsed?.args[0]);
     }
     
     return null;
@@ -140,8 +153,9 @@ export const useContract = () => {
 
   // Función para obtener balance
   const getBalance = async (tokenId: number) => {
-    if (!account || !provider) return 0;
+    if (!account) return 0;
     
+    const provider = getReadOnlyProvider();
     const contract = getContract(provider);
     const balance = await contract.balanceOf(account, tokenId);
     return Number(balance);
