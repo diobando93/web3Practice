@@ -73,13 +73,16 @@ export default function DashboardPage() {
     }
   }, [account, user]);
 
-  // Redirecciones
-  if (!account && !isLoading) {
-    router.push('/');
-    return null;
-  }
+  useEffect(() => {
+    if (!isLoading) {
+      if (!account || user?.status !== UserStatus.Approved) {
+        router.push('/');
+      }
+    }
+  }, [account, user, isLoading, router]);
 
-   if (isLoading || !account || user?.status !== UserStatus.Approved) {
+  // Mostrar loading mientras verifica
+  if (isLoading || !account || user?.status !== UserStatus.Approved) {
     return (
       <div className="min-h-screen flex flex-col">
         <Navbar />
@@ -92,6 +95,7 @@ export default function DashboardPage() {
       </div>
     );
   }
+
 
   const getRoleColor = (role: Role) => {
     const colors: Record<Role, string> = {
