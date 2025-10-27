@@ -267,7 +267,13 @@ export default function DashboardPage() {
                 <div className="mt-4 p-3 bg-muted rounded-lg">
                   <p className="text-xs font-semibold mb-2">Organization Info:</p>
                   <pre className="text-xs overflow-x-auto">
-                    {JSON.stringify(JSON.parse(user.metadata), null, 2)}
+                    {(() => {
+                      try {
+                        return JSON.stringify(JSON.parse(user.metadata), null, 2);
+                      } catch {
+                        return user.metadata;
+                      }
+                    })()}
                   </pre>
                 </div>
               )}
