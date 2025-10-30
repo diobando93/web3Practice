@@ -3,8 +3,7 @@
 ## 📋 Información General
 
 **Proyecto:** Supply Chain Tracker  
-**Periodo:** [Fecha inicio] - [Fecha fin]  
-**Alumno:** [Tu nombre]
+**Alumno:** Israel Obando
 
 ---
 

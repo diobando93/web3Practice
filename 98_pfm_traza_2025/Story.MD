@@ -2,11 +2,9 @@
 
 > Decentralized supply chain tracking system built with Solidity, Foundry, Next.js, and Web3
 
-![Supply Chain Tracker](./screenshots/dashboard.png)
-
 ## 🎥 Demo Video
 
-[Ver demostración en YouTube](TU_URL_DE_YOUTUBE)
+[Ver demostración en YouTube](https://www.youtube.com/watch?v=4TbbK-3A30w)
 
 ## 📋 Índice
 
@@ -227,23 +225,6 @@ docker-compose exec foundry forge coverage
    Organic Wheat → Whole Wheat Flour → Premium Flour Bags
 ```
 
-## 📸 Capturas de Pantalla
-
-### Dashboard
-![Dashboard](./screenshots/dashboard.png)
-
-### Crear Token
-![Create Token](./screenshots/create-token.png)
-
-### Transferencias
-![Transfers](./screenshots/transfers.png)
-
-### Trazabilidad
-![Traceability](./screenshots/traceability.png)
-
-### Admin Panel
-![Admin](./screenshots/admin-panel.png)
-
 ## 🤝 Contribución
 
 Este es un proyecto educativo desarrollado para el módulo de Programación Full Stack Modular (PFM).
@@ -251,14 +232,8 @@ Este es un proyecto educativo desarrollado para el módulo de Programación Full
 ### Autor
 
 **Tu Nombre**
-- GitHub: [@tu-usuario](https://github.com/tu-usuario)
-- LinkedIn: [Tu Perfil](https://linkedin.com/in/tu-perfil)
-
-### Institución
-
-**IES/Universidad**
-- Curso: 2024-2025
-- Módulo: Programación Full Stack Modular
+- GitHub: [@tu-usuario](https://github.com/diobando93)
+- LinkedIn: [Tu Perfil](https://www.linkedin.com/in/israel-obando/)
 
 ## 📄 Licencia
 
